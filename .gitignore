@@ -1,0 +1,7 @@
+certs/
+build/
+*.p12
+*.mobileprovision
+*.p8
+*.key
+*.csr

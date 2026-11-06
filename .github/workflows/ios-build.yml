@@ -1,0 +1,92 @@
+name: Build and Upload iOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Seleccionar Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app || true
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Generar proyecto
+        run: xcodegen generate
+
+      - name: Instalar certificado y perfil
+        env:
+          CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.PROFILE_BASE64 }}
+        run: |
+          set -e
+          KEYCHAIN=build.keychain
+          security create-keychain -p actions $KEYCHAIN
+          security default-keychain -s $KEYCHAIN
+          security unlock-keychain -p actions $KEYCHAIN
+          security set-keychain-settings -t 3600 -u $KEYCHAIN
+          echo "$CERT_P12_BASE64" | base64 -d > cert.p12
+          security import cert.p12 -k $KEYCHAIN -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions $KEYCHAIN
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROFILE_BASE64" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+
+      - name: Compilar y archivar
+        run: |
+          set -e
+          xcodebuild -project Billionaire.xcodeproj -scheme Billionaire \
+            -sdk iphoneos -configuration Release \
+            -archivePath build/Billionaire.xcarchive archive \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=D695835P4T \
+            PROVISIONING_PROFILE_SPECIFIER="Aeternum Billionaire AppStore" \
+            CODE_SIGN_IDENTITY="iPhone Distribution"
+
+      - name: Exportar IPA
+        run: |
+          set -e
+          cat > ExportOptions.plist << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store</string>
+            <key>teamID</key><string>D695835P4T</string>
+            <key>uploadSymbols</key><true/>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.franciscomaldonado.billionaire</key>
+              <string>Aeternum Billionaire AppStore</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath build/Billionaire.xcarchive \
+            -exportOptionsPlist ExportOptions.plist -exportPath build/ipa
+
+      - name: Subir a App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -e
+          mkdir -p ~/private_keys
+          echo "$ASC_KEY_P8" > ~/private_keys/AuthKey_$ASC_KEY_ID.p8
+          xcrun altool --upload-app -f build/ipa/Billionaire.ipa -t ios \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
+      - name: Guardar artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipa
+          path: build/ipa
+          if-no-files-found: ignore
