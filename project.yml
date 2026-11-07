@@ -33,7 +33,6 @@ targets:
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         NSPhotoLibraryAddUsageDescription: "Guardar tu tarjeta de logro en Fotos"
-        NSUserTrackingUsageDescription: "Medir el rendimiento de la app"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.franciscomaldonado.billionaire
