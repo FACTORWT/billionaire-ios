@@ -39,6 +39,7 @@ jobs:
           set -e
           xcodebuild -project Billionaire.xcodeproj -scheme Billionaire \
             -sdk iphoneos -configuration Release \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} MARKETING_VERSION=1.0 \
             -archivePath build/Billionaire.xcarchive archive \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=D695835P4T \
