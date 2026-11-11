@@ -115,7 +115,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
             title: "Magnate Pro",
             message: "La suscripción se compra dentro de la app con tu cuenta de App Store.",
             preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Comprar", style: .default, { _ in
+        alert.addAction(UIAlertAction(title: "Comprar", style: .default, handler: { _ in
             self.evaluateJS("window.dispatchEvent(new CustomEvent('native-open-paywall'))")
         }))
         alert.addAction(UIAlertAction(title: "Ahora no", style: .cancel))
@@ -128,21 +128,21 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         let reminderTitle = NotificationScheduler.isEnabled()
             ? "Recordatorio diario: activo a las \(NotificationScheduler.currentHour()):00"
             : "Recordatorio diario: desactivado"
-        sheet.addAction(UIAlertAction(title: reminderTitle, style: .default, { _ in
+        sheet.addAction(UIAlertAction(title: reminderTitle, style: .default, handler: { _ in
             NotificationScheduler.setEnabled(!NotificationScheduler.isEnabled())
         }))
 
-        sheet.addAction(UIAlertAction(title: "Cambiar hora del recordatorio", style: .default, { _ in
+        sheet.addAction(UIAlertAction(title: "Cambiar hora del recordatorio", style: .default, handler: { _ in
             self.chooseReminderHour()
         }))
 
-        sheet.addAction(UIAlertAction(title: "Política de privacidad", style: .default, { _ in
+        sheet.addAction(UIAlertAction(title: "Política de privacidad", style: .default, handler: { _ in
             if let u = URL(string: "https://billionseb.com/PrivacyPolicy") {
                 self.present(SFSafariViewController(url: u), animated: true)
             }
         }))
 
-        sheet.addAction(UIAlertAction(title: "Eliminar mi cuenta", style: .destructive, { _ in
+        sheet.addAction(UIAlertAction(title: "Eliminar mi cuenta", style: .destructive, handler: { _ in
             self.confirmAccountDeletion()
         }))
 
@@ -160,7 +160,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
     private func chooseReminderHour() {
         let alert = UIAlertController(title: "Hora del recordatorio", message: nil, preferredStyle: .actionSheet)
         for h in [8, 12, 18, 19, 20, 21] {
-            alert.addAction(UIAlertAction(title: "\(h):00", style: .default, { _ in
+            alert.addAction(UIAlertAction(title: "\(h):00", style: .default, handler: { _ in
                 NotificationScheduler.setHour(h)
                 NotificationScheduler.setEnabled(true)
             }))
@@ -178,7 +178,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
             title: "¿Eliminar tu cuenta?",
             message: "Se borran tu progreso, tu imperio y tu suscripción no se renueva. Esta acción no se puede deshacer.",
             preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Eliminar cuenta", style: .destructive, { _ in
+        alert.addAction(UIAlertAction(title: "Eliminar cuenta", style: .destructive, handler: { _ in
             self.performAccountDeletion()
         }))
         alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
@@ -196,7 +196,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
                         title: "Solicitud de borrado",
                         message: "Escríbenos a fmaldonado@aeternumtech.com desde el correo de tu cuenta y borramos tus datos en menos de 7 días.",
                         preferredStyle: .alert)
-                    alert.addAction(UIAlertAction(title: "Abrir correo", style: .default, { _ in
+                    alert.addAction(UIAlertAction(title: "Abrir correo", style: .default, handler: { _ in
                         if let u = URL(string: "mailto:fmaldonado@aeternumtech.com?subject=Eliminar%20mi%20cuenta%20Billionaire") {
                             UIApplication.shared.open(u)
                         }
