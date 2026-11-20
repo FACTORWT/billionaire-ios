@@ -17,6 +17,40 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         }
         config.userContentController = ucc
 
+
+        // Oculta el login de terceros en iOS (guía 4.8 de Apple), sin depender de la web.
+        let hideThirdPartyLogin = """
+        (function(){
+          function hideGoogle(){
+            var nodes=document.querySelectorAll('button,a,div[role=\"button\"]');
+            for(var i=0;i<nodes.length;i++){
+              var el=nodes[i];
+              var txt=(el.innerText||'').toLowerCase();
+              if(txt.indexOf('google')>=0 && el.getAttribute('data-hidden-google')!=='1'){
+                el.setAttribute('data-hidden-google','1');
+                el.style.setProperty('display','none','important');
+                var p=el.parentNode;
+                if(p){
+                  var kids=p.children;
+                  for(var k=0;k<kids.length;k++){
+                    var t=(kids[k].innerText||'').trim().toLowerCase();
+                    if((t==='or'||t==='o')&&kids[k].getAttribute('data-hidden-or')!=='1'){
+                      kids[k].setAttribute('data-hidden-or','1');
+                      kids[k].style.setProperty('display','none','important');
+                    }
+                  }
+                }
+              }
+            }
+          }
+          hideGoogle();
+          document.addEventListener('DOMContentLoaded',hideGoogle);
+          setInterval(hideGoogle,700);
+          try{ new MutationObserver(hideGoogle).observe(document.documentElement,{childList:true,subtree:true}); }catch(e){}
+        })();
+        """
+        let script = WKUserScript(source: hideThirdPartyLogin, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+        config.userContentController.addUserScript(script)
         webView = WKWebView(frame: .zero, configuration: config)
         // La web decide si muestra el login de Google mirando el user agent.
         // WKWebView no incluye el token "wKWebView" por defecto, así que lo añadimos.
