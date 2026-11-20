@@ -18,6 +18,13 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         config.userContentController = ucc
 
         webView = WKWebView(frame: .zero, configuration: config)
+        // La web decide si muestra el login de Google mirando el user agent.
+        // WKWebView no incluye el token "wKWebView" por defecto, así que lo añadimos.
+        if let baseUA = webView.value(forKey: "userAgent") as? String, !baseUA.isEmpty {
+            webView.customUserAgent = baseUA + " wKWebView"
+        } else {
+            webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) wKWebView Mobile/15E148"
+        }
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = false
@@ -27,7 +34,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
     override func viewDidLoad() {
         super.viewDidLoad()
         var req = URLRequest(url: startURL)
-        req.cachePolicy = .returnCacheDataElseLoad
+        req.cachePolicy = .useProtocolCachePolicy
         webView.load(req)
         setUpGearButton()
         registerForPushIfNeeded()
