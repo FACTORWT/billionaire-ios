@@ -12,7 +12,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         let ucc = WKUserContentController()
-        for name in ["share", "review", "purchase", "restore", "settings"] {
+        for name in ["share", "review", "purchase", "purchases", "restore", "settings"] {
             ucc.add(self, name: name)
         }
         config.userContentController = ucc
@@ -58,6 +58,13 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         showSettings()
     }
 
+
+    // Acepta tanto el id corto que manda la web como el identificador completo de App Store.
+    private func normalizeProductId(_ raw: String?) -> String? {
+        guard let raw = raw, !raw.isEmpty else { return StoreManager.monthlyProductId }
+        return raw.contains(".") ? raw : StoreManager.monthlyProductId
+    }
+
     func evaluateJS(_ js: String) {
         webView.evaluateJavaScript(js, completionHandler: nil)
     }
@@ -73,8 +80,12 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
             present(av, animated: true)
         case "review":
             requestNativeReview()
-        case "purchase":
-            if let pid = (message.body as? [String: Any])?["productId"] as? String {
+        case "purchase", "purchases":
+            let body = message.body as? [String: Any]
+            let action = (body?["action"] as? String) ?? "purchase"
+            if action == "restore" {
+                Task { await StoreManager.shared.restore() }
+            } else if let pid = normalizeProductId(body?["productId"] as? String) {
                 Task { await StoreManager.shared.purchase(productId: pid) }
             }
         case "restore":
