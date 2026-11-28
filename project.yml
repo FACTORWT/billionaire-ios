@@ -23,7 +23,7 @@ targets:
       path: Sources/Info.plist
       properties:
         CFBundleDisplayName: Billionaire
-        CFBundleShortVersionString: "1.1"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchStoryboardName: ""
         UISupportedInterfaceOrientations:
