@@ -438,7 +438,6 @@ final class PurchasesPlugin: NSObject, WKScriptMessageHandler {
             "environment": String(describing: transaction.environment),
             "ownershipType": String(describing: transaction.ownershipType),
             "isUpgraded": transaction.isUpgraded,
-            "quantity": transaction.quantity,
             "bundleId": Self.bundleID
         ]
 
