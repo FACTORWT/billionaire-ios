@@ -7,14 +7,22 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
     private var webView: WKWebView!
     private let startURL = URL(string: "https://billionseb.com/")!
 
+    /// StoreKit 2 bridge. Owns the "purchases" channel the web app posts to.
+    private let purchases = PurchasesPlugin()
+
     override func loadView() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         let ucc = WKUserContentController()
-        for name in ["share", "review", "purchase", "purchases", "restore", "settings"] {
+        for name in ["share", "review", "settings"] {
             ucc.add(self, name: name)
         }
+        // StoreKit 2 bridge: window.webkit.messageHandlers.purchases (the channel the
+        // web app expects), plus the legacy aliases "purchase" and "restore".
+        ucc.add(purchases, name: PurchasesPlugin.channelName)
+        ucc.add(purchases, name: "purchase")
+        ucc.add(purchases, name: "restore")
         config.userContentController = ucc
 
 
@@ -59,6 +67,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         } else {
             webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) wKWebView Mobile/15E148"
         }
+        purchases.attach(webView: webView)
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = false
@@ -100,12 +109,6 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
     }
 
 
-    // Acepta tanto el id corto que manda la web como el identificador completo de App Store.
-    private func normalizeProductId(_ raw: String?) -> String? {
-        guard let raw = raw, !raw.isEmpty else { return StoreManager.monthlyProductId }
-        return raw.contains(".") ? raw : StoreManager.monthlyProductId
-    }
-
     func evaluateJS(_ js: String) {
         webView.evaluateJavaScript(js, completionHandler: nil)
     }
@@ -121,16 +124,8 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
             present(av, animated: true)
         case "review":
             requestNativeReview()
-        case "purchase", "purchases":
-            let body = message.body as? [String: Any]
-            let action = (body?["action"] as? String) ?? "purchase"
-            if action == "restore" {
-                Task { await StoreManager.shared.restore() }
-            } else if let pid = normalizeProductId(body?["productId"] as? String) {
-                Task { await StoreManager.shared.purchase(productId: pid) }
-            }
-        case "restore":
-            Task { await StoreManager.shared.restore() }
+        // "purchase", "purchases" and "restore" are handled by PurchasesPlugin
+        // (StoreKit 2, replies keyed by requestId). Nothing to do here.
         case "settings":
             DispatchQueue.main.async { self.showSettings() }
         default: break
